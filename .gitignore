@@ -1,0 +1,5 @@
+data/
+results/*.npz
+*.zip
+venv/
+__pycache__/
