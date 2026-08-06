@@ -6,56 +6,52 @@ from config import GENRES
 
 class GenreCNN(nn.Module):
     """
-    4 convolutional blocks (conv -> batchnorm -> ReLU -> maxpool),
-    followed by global average pooling and a fully connected classifier.
-
-    Each conv block doubles the channel depth while pooling halves the
-    spatial dimensions, so the network progressively trades spatial detail
-    for more abstract, higher-level feature channels -- matching the
-    proposal's description of learning beat structure, instrument texture,
-    and tonal quality through successive layers.
+    VGG-style CNN: blocks 1-3 use TWO conv layers before pooling (more
+    representational depth at each resolution before downsampling), block 4
+    uses one. Channel depth increases 32 -> 64 -> 128 -> 256 -- roughly 6x
+    the capacity of the original 106k-parameter version. Dropout is lighter
+    in early blocks (where too much regularization causes underfitting) and
+    concentrated mainly in the classifier head.
     """
 
     def __init__(self, n_classes=len(GENRES)):
         super().__init__()
+
+        def conv_bn_relu(in_c, out_c):
+            return [
+                nn.Conv2d(in_c, out_c, kernel_size=3, padding=1),
+                nn.BatchNorm2d(out_c),
+                nn.ReLU(inplace=True),
+            ]
+
         self.features = nn.Sequential(
-            # Block 1: 1 -> 16 channels
-            nn.Conv2d(1, 16, kernel_size=3, padding=1),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
+            *conv_bn_relu(1, 32),
+            *conv_bn_relu(32, 32),
+            nn.MaxPool2d(2),
+            nn.Dropout(0.05),
+
+            *conv_bn_relu(32, 64),
+            *conv_bn_relu(64, 64),
             nn.MaxPool2d(2),
             nn.Dropout(0.1),
 
-            # Block 2: 16 -> 32 channels
-            nn.Conv2d(16, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
+            *conv_bn_relu(64, 128),
+            *conv_bn_relu(128, 128),
             nn.MaxPool2d(2),
-            nn.Dropout(0.1),
+            nn.Dropout(0.15),
 
-            # Block 3: 32 -> 64 channels
-            nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            nn.Dropout(0.2),
-
-            # Block 4: 64 -> 128 channels
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(),
+            *conv_bn_relu(128, 256),
             nn.MaxPool2d(2),
             nn.Dropout(0.2),
         )
 
-        self.global_pool = nn.AdaptiveAvgPool2d(1)  # collapses spatial dims to 1x1, regardless of input size
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
         self.classifier = nn.Sequential(
             nn.Flatten(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, n_classes),
-            # no softmax here -- nn.CrossEntropyLoss applies it internally during training
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.4),
+            nn.Linear(128, n_classes),
         )
 
     def forward(self, x):

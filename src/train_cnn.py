@@ -6,6 +6,7 @@ import os
 import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from sklearn.metrics import classification_report, confusion_matrix
+from collections import Counter
 
 from config import GENRES
 from dataset import SpecDataset
@@ -13,11 +14,11 @@ from model import GenreCNN, count_parameters
 
 DATA_PATH = "results/dataset_split.npz"
 RESULTS_DIR = "results"
-EPOCHS = 60          # more epochs, but we'll stop early if val loss stalls
+EPOCHS = 60
 BATCH_SIZE = 16
 LR = 1e-3
-WEIGHT_DECAY = 1e-4  # helps reduce overfitting
-PATIENCE = 10        # epochs to wait for improvement before stopping
+WEIGHT_DECAY = 5e-5   # lighter than before -- model was underfitting, ease off regularization slightly
+PATIENCE = 12
 
 
 def main():
@@ -33,9 +34,20 @@ def main():
     model = GenreCNN(n_classes=len(GENRES))
     print(f"Model has {count_parameters(model):,} trainable parameters")
 
+    # class weights: genres with fewer training samples (pop, blues, country)
+    # get proportionally more weight in the loss, so the model isn't just
+    # optimizing for the easy, well-represented genres
+    counts = Counter(y_train.tolist())
+    total = len(y_train)
+    weights = torch.tensor(
+        [total / (len(GENRES) * counts[i]) for i in range(len(GENRES))],
+        dtype=torch.float32,
+    )
+    print("Class weights:", {g: round(w.item(), 2) for g, w in zip(GENRES, weights)})
+
     opt = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode="min", factor=0.5, patience=4)
-    loss_fn = nn.CrossEntropyLoss()
+    loss_fn = nn.CrossEntropyLoss(weight=weights)
 
     history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
     best_val_loss = float("inf")
@@ -44,7 +56,7 @@ def main():
 
     for epoch in range(EPOCHS):
         model.train()
-        total_loss, correct, total = 0, 0, 0
+        total_loss, correct, total_n = 0, 0, 0
         for xb, yb in train_loader:
             opt.zero_grad()
             out = model(xb)
@@ -54,9 +66,9 @@ def main():
 
             total_loss += loss.item() * len(xb)
             correct += (out.argmax(1) == yb).sum().item()
-            total += len(xb)
-        train_loss = total_loss / total
-        train_acc = correct / total
+            total_n += len(xb)
+        train_loss = total_loss / total_n
+        train_acc = correct / total_n
 
         model.eval()
         val_loss, val_correct, val_total = 0, 0, 0
@@ -80,7 +92,6 @@ def main():
         print(f"Epoch {epoch+1}/{EPOCHS} | train_loss={train_loss:.3f} train_acc={train_acc:.3f} "
               f"| val_loss={val_loss:.3f} val_acc={val_acc:.3f} | lr={opt.param_groups[0]['lr']:.6f}")
 
-        # early stopping: keep the best model seen so far
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_state = model.state_dict()
@@ -91,10 +102,8 @@ def main():
                 print(f"No improvement for {PATIENCE} epochs, stopping early at epoch {epoch+1}")
                 break
 
-    # restore best model (not necessarily the last epoch's weights)
     model.load_state_dict(best_state)
 
-    # ---- final test evaluation ----
     model.eval()
     all_preds, all_labels = [], []
     with torch.no_grad():
