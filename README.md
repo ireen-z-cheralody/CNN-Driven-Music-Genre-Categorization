@@ -5,7 +5,6 @@ A deep learning project that classifies music into seven genres using **Convolut
 ## Overview
 
 This project uses deep learning to automatically predict the genre of a song from its audio. Each 30-second audio clip is converted into a normalized mel spectrogram, which is then treated as an image and classified using a CNN.
-
 The project also implements a **Support Vector Machine (SVM)** as a traditional machine learning baseline and evaluates the CNN on completely unseen music.
 
 ## Results
@@ -33,18 +32,18 @@ The model classifies music into:
 ## How It Works
 
 ```text
-Audio File
-    ↓
+  Audio File
+       ↓
 Resample to 22,050 Hz
-    ↓
+       ↓
 30-Second Audio Clip
-    ↓
+       ↓
 Mel Spectrogram
-    ↓
+       ↓
 Normalization
-    ↓
-CNN
-    ↓
+       ↓
+      CNN
+       ↓
 Genre Prediction
 ```
 
@@ -56,19 +55,19 @@ The final CNN consists of four convolutional blocks with increasing channel dept
 
 ```text
 Input: 128 × 640 Mel Spectrogram
-        ↓
-Conv Block — 32 channels
-        ↓
-Conv Block — 64 channels
-        ↓
-Conv Block — 128 channels
-        ↓
-Conv Block — 256 channels
-        ↓
+           ↓
+Convolutional Block — 32 channels
+           ↓
+Convolutional Block — 64 channels
+           ↓
+Convolutional Block — 128 channels
+           ↓
+Convolutional Block — 256 channels
+           ↓
 Global Average Pooling
-        ↓
+           ↓
 Fully Connected Layer — 64 units
-        ↓
+           ↓
 Output Layer — 7 Genres
 ```
 
@@ -78,8 +77,8 @@ Each convolutional block uses convolution, batch normalization, ReLU activation,
 
 The project combines:
 
-- **GTZAN Genre Collection** — 1,000 tracks
-- **Free Music Archive (FMA) Medium** — approximately 25,000 tracks
+- **GTZAN Genre Collection** (1,000 tracks)
+- **Free Music Archive (FMA) Medium** (approximately 25,000 tracks)
 
 Only the seven genres shared between the datasets were used. After preprocessing and augmentation, the dataset contained **3,808 training samples, 408 validation samples, and 409 test samples**.
 
@@ -112,7 +111,6 @@ Music-Genre-Categorization/
 ## Key Findings
 
 The CNN only slightly outperformed the SVM baseline (**79.46% vs. 79.17%**). This suggests that, with the relatively small training dataset, traditional audio features already capture many of the characteristics needed to distinguish the seven genres.
-
 Classical was the strongest-performing genre, while Pop was the most difficult. Similar genres such as Pop, Blues, and Country were frequently confused with one another.
 
 ## Limitations & Future Improvements
@@ -128,6 +126,3 @@ Classical was the strongest-performing genre, while Pop was the most difficult. 
 
 **Ireen Cheralody**  
 University of Toronto — Computer Engineering
-```
-
-**This is much closer to what I'd put on GitHub.** Your final report already contains the deep discussion; the README's job is mainly to **showcase the project and help someone understand/use the code quickly**.
