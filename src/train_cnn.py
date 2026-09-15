@@ -17,9 +17,16 @@ RESULTS_DIR = "results"
 EPOCHS = 60
 BATCH_SIZE = 16
 LR = 1e-3
-WEIGHT_DECAY = 5e-5   # lighter than before -- model was underfitting, ease off regularization slightly
+WEIGHT_DECAY = 1.5e-4   # up from 5e-5 
 PATIENCE = 12
 
+def mixup(x, y, n_classes, alpha=0.3):
+    lam = np.random.beta(alpha, alpha)
+    idx = torch.randperm(x.size(0))
+    x_mixed = lam * x + (1 - lam) * x[idx]
+    y_onehot = torch.nn.functional.one_hot(y, n_classes).float()
+    y_mixed = lam * y_onehot + (1 - lam) * y_onehot[idx]
+    return x_mixed, y_mixed
 
 def main():
     data = np.load(DATA_PATH)
@@ -50,7 +57,7 @@ def main():
     loss_fn = nn.CrossEntropyLoss(weight=weights)
 
     history = {"train_loss": [], "val_loss": [], "train_acc": [], "val_acc": []}
-    best_val_loss = float("inf")
+    best_val_acc = 0.0
     best_state = None
     epochs_no_improve = 0
 
@@ -59,13 +66,14 @@ def main():
         total_loss, correct, total_n = 0, 0, 0
         for xb, yb in train_loader:
             opt.zero_grad()
-            out = model(xb)
-            loss = loss_fn(out, yb)
+            xb_mixed, yb_mixed = mixup(xb, yb, len(GENRES))
+            out = model(xb_mixed)
+            loss = -(yb_mixed * torch.log_softmax(out, dim=1)).sum(dim=1).mean()
             loss.backward()
             opt.step()
 
             total_loss += loss.item() * len(xb)
-            correct += (out.argmax(1) == yb).sum().item()
+            correct += (out.argmax(1) == yb).sum().item()  # still measure against real labels
             total_n += len(xb)
         train_loss = total_loss / total_n
         train_acc = correct / total_n
@@ -91,9 +99,9 @@ def main():
 
         print(f"Epoch {epoch+1}/{EPOCHS} | train_loss={train_loss:.3f} train_acc={train_acc:.3f} "
               f"| val_loss={val_loss:.3f} val_acc={val_acc:.3f} | lr={opt.param_groups[0]['lr']:.6f}")
-
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
             best_state = model.state_dict()
             epochs_no_improve = 0
         else:
@@ -156,7 +164,6 @@ def main():
     plt.colorbar(im)
     plt.tight_layout()
     plt.savefig(os.path.join(RESULTS_DIR, "confusion_matrix.png"))
-
 
 if __name__ == "__main__":
     main()
