@@ -82,7 +82,21 @@ The project combines:
 
 Only the seven genres shared between the datasets were used. After preprocessing and augmentation, the dataset contained **3,808 training samples, 408 validation samples, and 409 test samples**.
 
-## Technologies
+## Key Findings
+
+The CNN only slightly outperformed the SVM baseline (**79.46% vs. 79.17%**). This suggests that, with the relatively small training dataset, traditional audio features already capture many of the characteristics needed to distinguish the seven genres.
+Classical was the strongest-performing genre, while Pop was the most difficult. Similar genres such as Pop, Blues, and Country were frequently confused with one another.
+
+## Limitations & Future Improvements
+
+- Expand the dataset with more diverse music and genres
+- Include more non-Western genres
+- Experiment with larger or pretrained CNN architectures
+- Explore transfer learning
+- Investigate multi-label genre classification
+- Expand the external unseen-data evaluation set
+
+## Technologies Used
 
 - Python
 - PyTorch
@@ -92,7 +106,7 @@ Only the seven genres shared between the datasets were used. After preprocessing
 - SVM
 - Mel Spectrograms
 
-## Project Structure
+## Project/File Structure
 
 ```text
 Music-Genre-Categorization/
@@ -108,21 +122,7 @@ Music-Genre-Categorization/
 
 > Dataset files are not included in this repository due to their size and licensing considerations.
 
-## Key Findings
-
-The CNN only slightly outperformed the SVM baseline (**79.46% vs. 79.17%**). This suggests that, with the relatively small training dataset, traditional audio features already capture many of the characteristics needed to distinguish the seven genres.
-Classical was the strongest-performing genre, while Pop was the most difficult. Similar genres such as Pop, Blues, and Country were frequently confused with one another.
-
-## Limitations & Future Improvements
-
-- Expand the dataset with more diverse music and genres
-- Include more non-Western genres
-- Experiment with larger or pretrained CNN architectures
-- Explore transfer learning
-- Investigate multi-label genre classification
-- Expand the external unseen-data evaluation set
-
 ## Author
 
 **Ireen Cheralody**  
-University of Toronto — Computer Engineering
+University of Toronto — Computer Engineering + PEY Co-op
